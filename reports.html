@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports & Analytics - Inventory Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="js/app.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 300px !important;
+            max-height: 300px !important;
+            width: 100% !important;
+            overflow: hidden;
+        }
+        
+        .chart-container canvas {
+            max-height: 100% !important;
+            max-width: 100% !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div x-data="{ sidebarOpen: false, currentPage: 'reports', ...reportsManager() }">
+        <!-- Sidebar -->
+        <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full lg:translate-x-0">
+            <div class="flex items-center justify-center h-16 bg-blue-600">
+                <h1 class="text-white text-xl font-bold">Inventory System</h1>
+            </div>
+            <nav class="mt-5">
+                <a href="index.html" data-nav-item="dashboard"
+                   class="flex items-center px-6 py-2 text-gray-700 hover:bg-gray-100">
+                    <i class="fas fa-tachometer-alt mr-3"></i>
+                    Dashboard
+                </a>
+                <a href="products.html" data-nav-item="products"
+                   class="flex items-center px-6 py-2 text-gray-700 hover:bg-gray-100">
+                    <i class="fas fa-box mr-3"></i>
+                    Products
+                </a>
+                <a href="inventory.html" data-nav-item="inventory"
+                   class="flex items-center px-6 py-2 text-gray-700 hover:bg-gray-100">
+                    <i class="fas fa-warehouse mr-3"></i>
+                    Inventory
+                </a>
+                <a href="customers.html" data-nav-item="customers"
+                   class="flex items-center px-6 py-2 text-gray-700 hover:bg-gray-100">
+                    <i class="fas fa-users mr-3"></i>
+                    Customers
+                </a>
+                <a href="invoices.html" data-nav-item="invoices"
+                   class="flex items-center px-6 py-2 text-gray-700 hover:bg-gray-100">
+                    <i class="fas fa-file-invoice mr-3"></i>
+                    Invoices
+                </a>
+                <a href="pos.html" data-nav-item="pos"
+                   class="flex items-center px-6 py-2 text-gray-700 hover:bg-gray-100">
+                    <i class="fas fa-cash-register mr-3"></i>
+                    POS
+                </a>
+                <a href="reports.html" data-nav-item="reports"
+                   class="flex items-center px-6 py-2 text-gray-700 hover:bg-gray-100 bg-gray-100">
+                    <i class="fas fa-chart-bar mr-3"></i>
+                    Reports
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:ml-64">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <div class="flex items-center">
+                        <button id="sidebar-toggle" class="lg:hidden text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <h2 class="ml-4 text-xl font-semibold text-gray-800">Reports & Analytics</h2>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <select x-model="selectedPeriod" @change="updateCharts()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="365">Last Year</option>
+                        </select>
+                        <button @click="exportReport()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main class="p-6">
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Sales</p>
+                            <p class="text-2xl font-bold text-gray-900" x-text="formatCurrency(metrics.totalSales)"></p>
+                            <p class="text-sm text-green-600">+15.3% vs last period</p>
+                        </div>
+                        <div class="p-3 rounded-full bg-blue-100">
+                            <i class="fas fa-chart-line text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Gross Profit</p>
+                            <p class="text-2xl font-bold text-gray-900" x-text="formatCurrency(metrics.grossProfit)"></p>
+                            <p class="text-sm text-green-600">+8.7% vs last period</p>
+                        </div>
+                        <div class="p-3 rounded-full bg-green-100">
+                            <i class="fas fa-money-bill-wave text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Orders</p>
+                            <p class="text-2xl font-bold text-gray-900" x-text="metrics.totalOrders"></p>
+                            <p class="text-sm text-blue-600">+23 new orders</p>
+                        </div>
+                        <div class="p-3 rounded-full bg-yellow-100">
+                            <i class="fas fa-shopping-cart text-yellow-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Avg. Order Value</p>
+                            <p class="text-2xl font-bold text-gray-900" x-text="formatCurrency(metrics.avgOrderValue)"></p>
+                            <p class="text-sm text-purple-600">+₦12,500 increase</p>
+                        </div>
+                        <div class="p-3 rounded-full bg-purple-100">
+                            <i class="fas fa-calculator text-purple-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Sales Trend Chart -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Sales Trend</h3>
+                        <div class="flex space-x-2">
+                            <button @click="chartType = 'line'" :class="chartType === 'line' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'" class="px-3 py-1 rounded text-sm">Line</button>
+                            <button @click="chartType = 'bar'" :class="chartType === 'bar' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'" class="px-3 py-1 rounded text-sm">Bar</button>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 300px; max-height: 300px; position: relative;">
+                        <canvas id="salesTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Top Products Chart -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Top Selling Products</h3>
+                    <div class="chart-container" style="height: 300px; max-height: 300px; position: relative;">
+                        <canvas id="topProductsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Customer Analysis -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Customer Analysis</h3>
+                    <div class="chart-container" style="height: 300px; max-height: 300px; position: relative;">
+                        <canvas id="customerChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Inventory Status -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Inventory Status</h3>
+                    <div class="chart-container" style="height: 300px; max-height: 300px; position: relative;">
+                        <canvas id="inventoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Tables -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Top Customers -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Top Customers</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <template x-for="customer in topCustomers" :key="customer.id">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="h-10 w-10 bg-gray-200 rounded-full mr-3 flex items-center justify-center">
+                                            <i class="fas fa-user text-gray-500"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900" x-text="customer.name"></p>
+                                            <p class="text-xs text-gray-500" x-text="customer.orders + ' orders'"></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-sm font-medium text-gray-900" x-text="formatCurrency(customer.total)"></p>
+                                        <p class="text-xs text-gray-500" x-text="customer.percentage + '%'"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Stock Alerts -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-800">Low Stock Alerts</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <template x-for="item in lowStockItems" :key="item.id">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="h-10 w-10 bg-red-100 rounded-lg mr-3 flex items-center justify-center">
+                                            <i class="fas fa-exclamation-triangle text-red-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900" x-text="item.name"></p>
+                                            <p class="text-xs text-gray-500" x-text="item.sku"></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800" x-text="item.stock + ' left'"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </main>
+        </div>
+
+        <!-- Mobile sidebar overlay -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-gray-600 bg-opacity-75 lg:hidden hidden"></div>
+    </div>
+
+    <script>
+        function reportsManager() {
+            return {
+                selectedPeriod: 30,
+                chartType: 'line',
+                metrics: {
+                    totalSales: 28650000,
+                    grossProfit: 8595000,
+                    totalOrders: 247,
+                    avgOrderValue: 116000
+                },
+                topCustomers: [
+                    { id: 1, name: 'EXPRESS AUTO', orders: 47, total: 18500000, percentage: 32.5 },
+                    { id: 2, name: 'MEGA PARTS DEPOT', orders: 52, total: 15200000, percentage: 26.8 },
+                    { id: 3, name: 'RAPID MOTORS', orders: 28, total: 12300000, percentage: 21.7 },
+                    { id: 4, name: 'SWIFT GARAGE', orders: 35, total: 8750000, percentage: 15.4 },
+                    { id: 5, name: 'AUTO CLINIC', orders: 19, total: 6800000, percentage: 12.0 }
+                ],
+                lowStockItems: [
+                    { id: 1, name: 'SOLITE 75AH BATTERY', sku: 'SOLITE-75AH', stock: 3 },
+                    { id: 2, name: 'ROCKET 200AH INVERTER', sku: 'ROCKET-200AH', stock: 8 },
+                    { id: 3, name: 'PREMIUM 45AH BATTERY', sku: 'PREM-45AH', stock: 2 },
+                    { id: 4, name: 'TIGER HEAD 9AH', sku: 'TIGER-9AH', stock: 4 }
+                ],
+
+                formatCurrency(amount) {
+                    return new Intl.NumberFormat('en-NG', {
+                        style: 'currency',
+                        currency: 'NGN',
+                        minimumFractionDigits: 0
+                    }).format(amount || 0);
+                },
+
+                updateCharts() {
+                    // This would trigger chart data updates based on selected period
+                    console.log('Updating charts for period:', this.selectedPeriod);
+                },
+
+                exportReport() {
+                    // This would generate and download a report
+                    window.notifications?.show('Report exported successfully!', 'success');
+                }
+            }
+        }
+
+        // Initialize charts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sales Trend Chart
+            const salesCtx = document.getElementById('salesTrendChart').getContext('2d');
+            new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
+                    datasets: [{
+                        label: 'Sales',
+                        data: [4200000, 5800000, 6400000, 7200000, 5000000],
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₦' + (value / 1000000).toFixed(1) + 'M';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Top Products Chart
+            const productsCtx = document.getElementById('topProductsChart').getContext('2d');
+            new Chart(productsCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['VISCA 100AH', 'SOLITE 75AH', 'RUN-ALL 90AH', 'ROCKET 200AH', 'Others'],
+                    datasets: [{
+                        data: [35, 25, 20, 12, 8],
+                        backgroundColor: [
+                            'rgb(59, 130, 246)',
+                            'rgb(34, 197, 94)',
+                            'rgb(251, 191, 36)',
+                            'rgb(239, 68, 68)',
+                            'rgb(156, 163, 175)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1.5,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+
+            // Customer Analysis Chart
+            const customerCtx = document.getElementById('customerChart').getContext('2d');
+            new Chart(customerCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['EXPRESS AUTO', 'MEGA PARTS', 'RAPID MOTORS', 'SWIFT GARAGE', 'AUTO CLINIC'],
+                    datasets: [{
+                        label: 'Revenue (Millions)',
+                        data: [18.5, 15.2, 12.3, 8.7, 6.8],
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₦' + value + 'M';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Inventory Status Chart
+            const inventoryCtx = document.getElementById('inventoryChart').getContext('2d');
+            new Chart(inventoryCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['In Stock', 'Low Stock', 'Out of Stock'],
+                    datasets: [{
+                        data: [72, 23, 5],
+                        backgroundColor: [
+                            'rgb(34, 197, 94)',
+                            'rgb(251, 191, 36)',
+                            'rgb(239, 68, 68)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1.5,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
